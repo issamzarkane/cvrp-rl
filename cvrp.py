@@ -1,5 +1,7 @@
 import numpy as np 
 from scipy.spatial import distance_matrix
+from numpy import random
+from state import State
 
 class CVRP :
     def __init__(self, cities, demands, capacity, depot_index=0) :
@@ -27,3 +29,13 @@ class CVRP :
     def is_feasible_route(self, route):
         route_demand = sum(self.demands[city] for city in route if city != self.depot_index)
         return route_demand <= self.capacity
+    
+    def sample_random_start_state(self) :
+        random_state = State(self)
+        num_cities = len(self.cities) - 1
+        num_visited = random.randint(1, num_cities)
+        visited_cities = random.sample(range(1, num_cities + 1), num_visited)
+        for city in visited_cities:
+            random_state.transition(city)
+
+        return random_state
