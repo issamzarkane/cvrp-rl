@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import random
+from utils import solve_milp_with_value_function
 
 class Policy:
     def __init__(self, cvrp_instance, state, value_net, gamma=0.9):
@@ -105,3 +106,20 @@ def gather_evaluation_data(policy, value_net, num_samples=100):
             state = next_state
         data.append(sample_path)
     return data
+
+
+def policy_evaluation_with_milp(cvrp_instance, state, value_net, optimizer, gamma=0.9):
+    """
+    Policy evaluation using MILP for immediate cost and cost-to-go.
+    """
+    route = solve_milp_with_value_function(cvrp_instance, state, value_net)
+    total_cost = sum(cvrp_instance.distance_matrix[i][j] for i, j in route)
+
+    for _, j in route:
+        if j != cvrp_instance.depot_index:
+            state.transition(j)
+
+    state_tensor = torch.FloatTensor(state.encode_state())
+    cost_to_go = value_net(state_tensor).item()
+
+    return total_cost + cost_to_go, state

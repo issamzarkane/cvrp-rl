@@ -1,6 +1,8 @@
 # utils.py
 from state import State
 from cvrp import CVRP
+from pyscipopt import Model
+import torch
 
 def transition(state, action):
     """
@@ -47,3 +49,74 @@ def cost(cvrp, action):
     for i in range(len(action) - 1):
         total_cost += cvrp.distance_matrix[action[i]][action[i + 1]]
     return total_cost
+
+
+def solve_milp_with_value_function(cvrp_instance, state, value_net):
+    """
+    Solves the CVRP routing problem for the current state using SCIP,
+    integrating immediate cost and cost-to-go (value function).
+
+    Parameters:
+        cvrp_instance (CVRP): The CVRP problem instance.
+        state (State): Current state of the problem.
+        value_net (ValueNetwork): Trained neural network for value approximation.
+
+    Returns:
+        list: Optimal route determined by SCIP.
+    """
+    n = cvrp_instance.num_cities
+    distances = cvrp_instance.distance_matrix
+
+    # Initialize SCIP model
+    model = Model("CVRP_with_Value_Function")
+
+    # Decision variables
+    x = {}  # Binary variables: x[i, j] = 1 if traveling from i to j
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                x[i, j] = model.addVar(vtype="B", name=f"x_{i}_{j}")
+
+    u = {}  # Subtour elimination variables
+    for i in range(1, n):
+        u[i] = model.addVar(vtype="C", name=f"u_{i}")
+
+    # Objective: Minimize immediate cost + cost-to-go
+    immediate_cost = sum(distances[i][j] * x[i, j] for i in range(n) for j in range(n) if i != j)
+    state_tensor = torch.FloatTensor(state.encode_state())
+    cost_to_go = value_net(state_tensor).item()
+    model.setObjective(immediate_cost + cost_to_go, sense="minimize")
+
+    # Constraints
+
+    # Each city (except depot) must be visited exactly once
+    for i in range(1, n):
+        model.addCons(sum(x[i, j] for j in range(n) if i != j) == 1)
+        model.addCons(sum(x[j, i] for j in range(n) if i != j) == 1)
+
+    # Depot flow constraints
+    model.addCons(sum(x[cvrp_instance.depot_index, j] for j in range(1, n)) == 1)
+    model.addCons(sum(x[j, cvrp_instance.depot_index] for j in range(1, n)) == 1)
+
+    # Subtour elimination constraints (MTZ formulation)
+    for i in range(1, n):
+        for j in range(1, n):
+            if i != j:
+                model.addCons(u[i] - u[j] + n * x[i, j] <= n - 1)
+
+    # Capacity constraints
+    for i in range(1, n):
+        model.addCons(u[i] <= cvrp_instance.capacity)
+        model.addCons(u[i] >= cvrp_instance.demands[i])
+
+    # Optimize
+    model.optimize()
+
+    # Extract the optimal route
+    route = []
+    if model.getStatus() == "optimal":
+        for i in range(n):
+            for j in range(n):
+                if i != j and model.getVal(x[i, j]) > 0.5:
+                    route.append((i, j))
+    return route
