@@ -1,0 +1,16 @@
+{"time":"2024-11-20T15:52:46.2483582+01:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-20T15:52:46.2483582+01:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\wandb\\run-20241120_155246-lckwd3km\\logs\\debug-core.log"}
+{"time":"2024-11-20T15:52:46.377961+01:00","level":"INFO","msg":"created new stream","id":"lckwd3km"}
+{"time":"2024-11-20T15:52:46.377961+01:00","level":"INFO","msg":"stream: started","id":"lckwd3km"}
+{"time":"2024-11-20T15:52:46.377961+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:46.377961+01:00","level":"INFO","msg":"sender: started","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:46.377961+01:00","level":"INFO","msg":"handler: started","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:46.8439291+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-20T15:52:55.7364675+01:00","level":"INFO","msg":"stream: closing","id":"lckwd3km"}
+{"time":"2024-11-20T15:52:55.7364675+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-20T15:52:55.7385403+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-20T15:52:57.1157559+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-20T15:52:57.4703657+01:00","level":"INFO","msg":"handler: closed","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:57.4703657+01:00","level":"INFO","msg":"sender: closed","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:57.4703657+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"lckwd3km"}
+{"time":"2024-11-20T15:52:57.4709104+01:00","level":"INFO","msg":"stream: closed","id":"lckwd3km"}

@@ -1,0 +1,32 @@
+{
+  "os":  "Windows-10-10.0.22631-SP0",
+  "python":  "3.11.1",
+  "startedAt":  "2024-11-20T15:05:20.462157Z",
+  "program":  "C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\main.py",
+  "codePath":  "main.py",
+  "git":  {
+    "remote":  "https://github.com/issamzarkane/cvrp-rl.git",
+    "commit":  "db1c715a8989ed7a0cf04b09142e42ea57b77fcf"
+  },
+  "email":  "issamizarkane@gmail.com",
+  "root":  "C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation",
+  "host":  "issam",
+  "username":  "issam",
+  "executable":  "C:\\Program Files\\Python311\\python.exe",
+  "codePathLocal":  "main.py",
+  "cpu_count":  4,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "255665369088",
+      "used":  "255534194688"
+    }
+  },
+  "memory":  {
+    "total":  "6387523584"
+  },
+  "cpu":  {
+    "count":  4,
+    "countLogical":  8
+  }
+}

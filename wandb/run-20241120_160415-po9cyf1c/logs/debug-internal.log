@@ -1,0 +1,16 @@
+{"time":"2024-11-20T16:04:15.720474+01:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-20T16:04:15.7206003+01:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\wandb\\run-20241120_160415-po9cyf1c\\logs\\debug-core.log"}
+{"time":"2024-11-20T16:04:15.8415949+01:00","level":"INFO","msg":"created new stream","id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:15.8421151+01:00","level":"INFO","msg":"handler: started","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:15.8421833+01:00","level":"INFO","msg":"stream: started","id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:15.8421151+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:15.8421151+01:00","level":"INFO","msg":"sender: started","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:16.747292+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-20T16:04:25.5274707+01:00","level":"INFO","msg":"stream: closing","id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:25.5279959+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-20T16:04:25.5301837+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-20T16:04:27.8054922+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-20T16:04:29.2433099+01:00","level":"INFO","msg":"handler: closed","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:29.2433099+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:29.2433099+01:00","level":"INFO","msg":"sender: closed","stream_id":"po9cyf1c"}
+{"time":"2024-11-20T16:04:29.2441579+01:00","level":"INFO","msg":"stream: closed","id":"po9cyf1c"}

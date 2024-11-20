@@ -1,0 +1,7 @@
+{"time":"2024-11-20T15:09:17.8814546+01:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-20T15:09:17.8819641+01:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\wandb\\run-20241120_150917-1mh314to\\logs\\debug-core.log"}
+{"time":"2024-11-20T15:09:18.0147186+01:00","level":"INFO","msg":"created new stream","id":"1mh314to"}
+{"time":"2024-11-20T15:09:18.0147186+01:00","level":"INFO","msg":"stream: started","id":"1mh314to"}
+{"time":"2024-11-20T15:09:18.0147186+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"1mh314to"}
+{"time":"2024-11-20T15:09:18.0152522+01:00","level":"INFO","msg":"sender: started","stream_id":"1mh314to"}
+{"time":"2024-11-20T15:09:18.0152522+01:00","level":"INFO","msg":"handler: started","stream_id":"1mh314to"}

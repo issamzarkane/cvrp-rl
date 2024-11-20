@@ -1,0 +1,17 @@
+{"time":"2024-11-20T11:45:08.5458782+01:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-20T11:45:08.5464132+01:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\wandb\\run-20241120_114508-4k9rz5g9\\logs\\debug-core.log"}
+{"time":"2024-11-20T11:45:08.6782012+01:00","level":"INFO","msg":"created new stream","id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:08.6787595+01:00","level":"INFO","msg":"stream: started","id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:08.6793024+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:08.6793024+01:00","level":"INFO","msg":"handler: started","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:08.6793024+01:00","level":"INFO","msg":"sender: started","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:09.3209423+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-20T11:45:17.5458642+01:00","level":"INFO","msg":"stream: closing","id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:17.5458642+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-20T11:45:17.546911+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-20T11:45:18.956219+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-20T11:45:19.3525163+01:00","level":"INFO","msg":"handler: closed","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:19.3525163+01:00","level":"INFO","msg":"sender: closed","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:19.3525163+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"4k9rz5g9"}
+{"time":"2024-11-20T11:45:19.3525163+01:00","level":"ERROR","msg":"runfiles: CreateRunFiles returned error: api: failed sending: POST https://api.wandb.ai/graphql giving up after 1 attempt(s): context canceled"}
+{"time":"2024-11-20T11:45:19.3525163+01:00","level":"INFO","msg":"stream: closed","id":"4k9rz5g9"}

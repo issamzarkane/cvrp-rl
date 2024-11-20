@@ -3,6 +3,7 @@ from state import State
 from cvrp import CVRP
 from pyscipopt import Model
 import torch
+import matplotlib.pyplot as plt 
 
 def transition(state, action):
     """
@@ -50,6 +51,44 @@ def cost(cvrp, action):
         total_cost += cvrp.distance_matrix[action[i]][action[i + 1]]
     return total_cost
 
+
+
+
+def visualize_route(cvrp_instance, route):
+    """
+    Visualizes the current policy's route on a 2D plane.
+
+    Parameters:
+        cvrp_instance (CVRP): The CVRP problem instance containing city coordinates.
+        route (list): Sequential route as a list of city indices.
+    """
+    depot = cvrp_instance.cities[cvrp_instance.depot_index]
+    cities = cvrp_instance.cities
+
+    plt.figure(figsize=(10, 8))
+    
+    # Plot depot
+    plt.scatter(depot[0], depot[1], c='red', label="Depot", s=100, zorder=5)
+    plt.text(depot[0], depot[1], "Depot", fontsize=12, ha='right')
+    
+    # Plot cities
+    for i, (x, y) in enumerate(cities):
+        if i != cvrp_instance.depot_index:
+            plt.scatter(x, y, c='blue', label="City" if i == 1 else "", s=50)
+            plt.text(x, y, f"{i}", fontsize=10, ha='right')
+
+    # Plot route
+    for i in range(len(route) - 1):
+        x1, y1 = cities[route[i]]
+        x2, y2 = cities[route[i + 1]]
+        plt.plot([x1, x2], [y1, y2], 'g-', linewidth=2)
+
+    plt.title("Current Policy Route Visualization")
+    plt.xlabel("X-coordinate")
+    plt.ylabel("Y-coordinate")
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 def solve_milp_with_value_function(cvrp_instance, state, value_net):
     """
@@ -119,4 +158,27 @@ def solve_milp_with_value_function(cvrp_instance, state, value_net):
             for j in range(n):
                 if i != j and model.getVal(x[i, j]) > 0.5:
                     route.append((i, j))
+    #route = extract_sequential_route(route)
+    return route
+
+def extract_sequential_route(edges, start_node=0):
+    """
+    Converts a list of (i, j) edges into a sequential route.
+
+    Parameters:
+        edges (list of tuples): List of edges (i, j) representing the route.
+        start_node (int): Starting node, typically the depot (0).
+
+    Returns:
+        list: Sequential route as a list of nodes.
+    """
+    route = [start_node]
+    current_node = start_node
+
+    while len(route) <= len(edges):  # Ensure all edges are included
+        for i, j in edges:
+            if i == current_node:  # Find the next edge starting from the current node
+                route.append(j)
+                current_node = j
+                break
     return route

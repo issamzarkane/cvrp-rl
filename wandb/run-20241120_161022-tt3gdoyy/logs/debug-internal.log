@@ -1,0 +1,17 @@
+{"time":"2024-11-20T16:10:22.1149203+01:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-20T16:10:22.1149203+01:00","level":"INFO","msg":"created symlink","path":"C:\\Users\\issam\\OneDrive\\Desktop\\phd\\paper2Implementation\\wandb\\run-20241120_161022-tt3gdoyy\\logs\\debug-core.log"}
+{"time":"2024-11-20T16:10:22.235516+01:00","level":"INFO","msg":"created new stream","id":"tt3gdoyy"}
+{"time":"2024-11-20T16:10:22.2361504+01:00","level":"INFO","msg":"stream: started","id":"tt3gdoyy"}
+{"time":"2024-11-20T16:10:22.2361504+01:00","level":"INFO","msg":"handler: started","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:10:22.2361504+01:00","level":"INFO","msg":"sender: started","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:10:22.2361504+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:10:23.639903+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-20T16:11:48.7734907+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-20T16:11:48.775467+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-20T16:11:49.7843573+01:00","level":"INFO","msg":"handler: operation stats","stats":{"operations":[{"desc":"updating run config","runtime_seconds":0.2818687}],"total_operations":1}}
+{"time":"2024-11-20T16:11:55.1610204+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-20T16:11:58.04306+01:00","level":"INFO","msg":"stream: closing","id":"tt3gdoyy"}
+{"time":"2024-11-20T16:11:58.04306+01:00","level":"INFO","msg":"handler: closed","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:11:58.0435693+01:00","level":"INFO","msg":"sender: closed","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:11:58.04306+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"tt3gdoyy"}
+{"time":"2024-11-20T16:11:58.0441351+01:00","level":"INFO","msg":"stream: closed","id":"tt3gdoyy"}
