@@ -17,3 +17,10 @@ config: {}
 2024-11-20 15:09:17,859 INFO    MainThread:17260 [wandb_init.py:init():686] backend started and connected
 2024-11-20 15:09:17,884 INFO    MainThread:17260 [wandb_init.py:init():781] updated telemetry
 2024-11-20 15:09:17,956 INFO    MainThread:17260 [wandb_init.py:init():814] communicating run to backend with 90.0 second timeout
+2024-11-20 15:09:19,880 INFO    MainThread:17260 [wandb_init.py:init():867] starting run threads in backend
+2024-11-20 15:09:20,291 INFO    MainThread:17260 [wandb_run.py:_console_start():2456] atexit reg
+2024-11-20 15:09:20,291 INFO    MainThread:17260 [wandb_run.py:_redirect():2305] redirect: wrap_raw
+2024-11-20 15:09:20,292 INFO    MainThread:17260 [wandb_run.py:_redirect():2370] Wrapping output streams.
+2024-11-20 15:09:20,292 INFO    MainThread:17260 [wandb_run.py:_redirect():2395] Redirects installed.
+2024-11-20 15:09:20,300 INFO    MainThread:17260 [wandb_init.py:init():911] run started, returning control to user process
+2024-11-20 15:09:20,300 INFO    MainThread:17260 [wandb_watch.py:_watch():71] Watching

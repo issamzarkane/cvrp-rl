@@ -1,22 +1,53 @@
+import numpy as np
+
 class State:
-    def __init__(self, cvrp_instance) :
+    def __init__(self, cvrp_instance, visited=None):
         self.cvrp = cvrp_instance
-        self.num_cities = cvrp_instance.num_cities 
-        # Initial state : depot + cities are all marked 1 (not visited)
-        self.visited = [1] * cvrp_instance.num_cities  #  = [1,1,1,....,1] 
-
-    def transition(self, city_index) : 
-        #transition(i) means we go to city i e.i. setting its index in visited to 0
-        if city_index < self.num_cities and city_index != self.cvrp.depot_index and self.visited[city_index] == 1 : 
-            self.visited[city_index] = 0 
-
-    def is_terminal(self) : 
-        #Checking if we visited all the cities, True is state is terminal, False if not
-        return all(v==0 for v in self.visited[1:]) 
+        # Initialize visited cities array (0 for unvisited, 1 for visited)
+        if visited is None:
+            self.visited = [0] * len(self.cvrp.cities)
+            self.visited[0] = 1  # Mark depot as visited
+        else:
+            self.visited = visited
+            
+    def encode_state(self):
+        """Binary encoding of state as described in the paper"""
+        return np.array(self.visited, dtype=np.float32)
     
-    def get_unvisited_cities(self) :
-        # returns the indexes where the value is 1 besides the depot
-        return [i for i, visited in enumerate(self.visited) if visited == 1 and i!=self.cvrp.depot_index]
+    def transition(self, action):
+        """Execute action and return new state"""
+        if not self.is_action_valid(action):
+            return None
+            
+        new_visited = self.visited.copy()
+        for city in action:
+            if city != 0:  # Skip depot
+                new_visited[city] = 1
+                
+        return State(self.cvrp, new_visited)
     
-    def encode_state(self) :
-        return tuple(self.visited)
+    def is_terminal(self):
+        """Check if all cities have been visited"""
+        return all(self.visited[1:])  # Exclude depot
+    
+    def is_action_valid(self, action):
+        """Check if action is valid in current state"""
+        # Check if action starts and ends at depot
+        if action[0] != 0 or action[-1] != 0:
+            return False
+            
+        # Check capacity constraint
+        total_demand = sum(self.cvrp.demands[i] for i in action[1:-1])
+        if total_demand > self.cvrp.capacity:
+            return False
+            
+        # Check if action visits already visited cities
+        for city in action[1:-1]:
+            if self.visited[city] == 1:
+                return False
+                
+        return True
+    
+    def get_unvisited_cities(self):
+        """Return list of unvisited cities"""
+        return [i for i, v in enumerate(self.visited) if v == 0]

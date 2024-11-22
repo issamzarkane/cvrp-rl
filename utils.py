@@ -105,6 +105,8 @@ def solve_milp_with_value_function(cvrp_instance, state, value_net):
     """
     n = cvrp_instance.num_cities
     distances = cvrp_instance.distance_matrix
+    demands = cvrp_instance.demands
+    Q = cvrp_instance.capacity
 
     # Initialize SCIP model
     model = Model("CVRP_with_Value_Function")
@@ -119,6 +121,11 @@ def solve_milp_with_value_function(cvrp_instance, state, value_net):
     u = {}  # Subtour elimination variables
     for i in range(1, n):
         u[i] = model.addVar(vtype="C", name=f"u_{i}")
+
+    # Add capacity constraints
+    load = {}
+    for i in range(n):
+        load[i] = model.addVar(vtype="C", name=f"load_{i}")
 
     # Objective: Minimize immediate cost + cost-to-go
     immediate_cost = sum(distances[i][j] * x[i, j] for i in range(n) for j in range(n) if i != j)
@@ -145,8 +152,19 @@ def solve_milp_with_value_function(cvrp_instance, state, value_net):
 
     # Capacity constraints
     for i in range(1, n):
-        model.addCons(u[i] <= cvrp_instance.capacity)
-        model.addCons(u[i] >= cvrp_instance.demands[i])
+        model.addCons(u[i] <= Q)
+        model.addCons(u[i] >= demands[i])
+
+    # Vehicle capacity constraints
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                model.addCons(load[j] >= load[i] + demands[j] * x[i,j] 
+                            - Q * (1 - x[i,j]))
+    
+    # Load bounds
+    for i in range(1, n):
+        model.addCons(demands[i] <= load[i] <= Q)
 
     # Optimize
     model.optimize()
@@ -158,7 +176,6 @@ def solve_milp_with_value_function(cvrp_instance, state, value_net):
             for j in range(n):
                 if i != j and model.getVal(x[i, j]) > 0.5:
                     route.append((i, j))
-    #route = extract_sequential_route(route)
     return route
 
 def extract_sequential_route(edges, start_node=0):
