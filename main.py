@@ -5,7 +5,7 @@ from cvrp import CVRP
 from state import State
 from action import Action
 from parser import parse_cvrplib_from_folders, parse_solution_from_folders
-from policy import Policy, ValueNetwork, policy_evaluation_with_milp, policy_improvement
+from policy import Policy, ValueNetwork
 import matplotlib.pyplot as plt
 from ORtools import ORToolsSolver
 
@@ -46,7 +46,7 @@ def main():
                 gaps = []
                 for iteration in range(10):
                     print(f"Iteration {iteration + 1}")
-                    total_cost, next_state = policy_evaluation_with_milp(cvrp_instance, initial_state, value_network, optimizer)
+                    total_cost, next_state = policy.policy_evaluation_with_milp(cvrp_instance, initial_state, value_network, optimizer)
                     gap = compute_gap(total_cost, ortools_cost)
                     gaps.append(gap)
                     print(f"Model cost: {total_cost}, OR-Tools cost: {ortools_cost}, Gap: {gap}%")

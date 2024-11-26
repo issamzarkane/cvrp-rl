@@ -32,7 +32,7 @@ def parse_cvrplib(filepath):
         filepath (str): Path to the CVRPLIB instance file.
 
     Returns:
-        tuple: (depot, cities, demands, capacity).
+        tuple: (depot, cities, demands, capacity, num_vehicles).
     """
     with open(filepath, 'r') as file:
         lines = file.readlines()
@@ -42,6 +42,7 @@ def parse_cvrplib(filepath):
     demands = []
     depot = None
     capacity = 0
+    num_vehicles = int(os.path.basename(filepath).split('-k')[1].split('.')[0])  # Extract k value from filename
 
     for line in lines:
         if "NODE_COORD_SECTION" in line:
@@ -61,8 +62,7 @@ def parse_cvrplib(filepath):
         elif "CAPACITY" in line:
             capacity = int(line.split()[-1])
 
-    return depot, cities, demands, capacity
-
+    return depot, cities, demands, capacity, num_vehicles
 
 def parse_solution_from_folders(folder_paths):
     """

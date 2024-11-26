@@ -6,8 +6,8 @@ class ORToolsSolver:
     def __init__(self, cvrp_instance):
         self.cvrp = cvrp_instance
         self.manager = pywrapcp.RoutingIndexManager(len(self.cvrp.cities), 
-                                                  1,  # Number of vehicles
-                                                  0)  # Depot
+                                                  self.cvrp.num_vehicles,  # Using num_vehicles from CVRP
+                                                  self.cvrp.depot_index)
         self.routing = pywrapcp.RoutingModel(self.manager)
         
     def distance_callback(self, from_index, to_index):
@@ -20,36 +20,58 @@ class ORToolsSolver:
         return self.cvrp.demands[from_node]
         
     def solve(self):
-        # Register callbacks
         transit_callback_index = self.routing.RegisterTransitCallback(self.distance_callback)
         self.routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
         
-        # Add capacity constraint
         demand_callback_index = self.routing.RegisterUnaryTransitCallback(self.demand_callback)
         self.routing.AddDimensionWithVehicleCapacity(
             demand_callback_index,
-            0,  # null capacity slack
-            [self.cvrp.capacity],  # vehicle maximum capacities
-            True,  # start cumul to zero
+            0,  
+            [self.cvrp.capacity] * self.cvrp.num_vehicles,  # Capacity for each vehicle
+            True,  
             'Capacity')
             
-        # Set search parameters
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
         search_parameters.first_solution_strategy = (
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-            
-        # Solve
+        
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+        search_parameters.time_limit.seconds = 300
+        #search_parameters.solution_limit = 100        
+        # Add debug prints
+        print("Starting solve...")
         solution = self.routing.SolveWithParameters(search_parameters)
+        print(f"Solution found: {solution is not None}")
         
         if solution:
-            return self.get_solution_cost(solution)
-        return None
-        
+            routes, cost = self.get_solution_routes(solution), self.get_solution_cost(solution)
+            print(f"Routes: {routes}")
+            print(f"Cost: {cost}")
+            return routes, cost
+        return None, None        
     def get_solution_cost(self, solution):
         total_cost = 0
-        index = self.routing.Start(0)
-        while not self.routing.IsEnd(index):
-            previous_index = index
-            index = solution.Value(self.routing.NextVar(index))
-            total_cost += self.routing.GetArcCostForVehicle(previous_index, index, 0)
+        for vehicle_id in range(self.cvrp.num_vehicles):
+            route_cost = 0
+            index = self.routing.Start(vehicle_id)
+            while not self.routing.IsEnd(index):
+                from_node = self.manager.IndexToNode(index)
+                next_index = solution.Value(self.routing.NextVar(index))
+                to_node = self.manager.IndexToNode(next_index)
+                route_cost += self.cvrp.distance_matrix[from_node][to_node]
+                index = next_index
+            print(f"Vehicle {vehicle_id} route cost: {route_cost}")
+            total_cost += route_cost
         return total_cost
+    def get_solution_routes(self, solution):
+        routes = []
+        for vehicle_id in range(self.cvrp.num_vehicles):
+            route = []
+            index = self.routing.Start(vehicle_id)
+            while not self.routing.IsEnd(index):
+                route.append(self.manager.IndexToNode(index))
+                index = solution.Value(self.routing.NextVar(index))
+            route.append(self.manager.IndexToNode(index))
+            routes.append(route)
+        return routes
