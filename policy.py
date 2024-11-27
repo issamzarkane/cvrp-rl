@@ -3,26 +3,32 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from utils import solve_milp_with_value_function
+from pyscipopt import Model
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, hidden_dim):
         super(ValueNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 16)
-        self.fc4 = nn.Linear(16, 1)
+        if hidden_dim == 0:
+            self.fc1 = nn.Linear(input_size, 1)
+        else:
+            self.fc1 = nn.Linear(input_size, hidden_dim*4)
+            self.fc2 = nn.Linear(hidden_dim*4, hidden_dim*2)
+            self.fc3 = nn.Linear(hidden_dim*2, hidden_dim)
+            self.fc4 = nn.Linear(hidden_dim, 1)
+        self.hidden_dim = hidden_dim
         self.relu = nn.ReLU()
         
-        nn.init.xavier_uniform_(self.fc1.weight)
-        nn.init.xavier_uniform_(self.fc2.weight)
-        nn.init.xavier_uniform_(self.fc3.weight)
-        nn.init.xavier_uniform_(self.fc4.weight)
+        for layer in [layer for layer in self.children() if isinstance(layer, nn.Linear)] :
+            nn.init.xavier_uniform_(layer.weight)
     
     def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        x = self.relu(self.fc3(x))
-        return self.fc4(x)
+        if self.hidden_dim == 0:
+            return self.fc1(x)
+        else :
+            x = self.relu(self.fc1(x))
+            x = self.relu(self.fc2(x))
+            x = self.relu(self.fc3(x))
+            return self.fc4(x)
 
 class Policy:
     def __init__(self, cvrp_instance, initial_state, value_net, gamma=0.9):
@@ -140,3 +146,68 @@ class Policy:
             self.train_value_network(optimizer)
             
             print(f"Total Cost: {total_cost}")
+
+    def policy_evaluation_with_milp(self, cvrp_instance, state, value_net, optimizer):
+        """
+        Evaluates current policy using MILP with value function approximation
+        """
+        model = Model("CVRP_with_Value_Function")
+        n = cvrp_instance.num_cities
+        
+        # Decision variables for each vehicle
+        x = {}
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(n):
+                for j in range(n):
+                    if i != j:
+                        x[v,i,j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
+        
+        # Add vehicle-specific constraints
+        for v in range(cvrp_instance.num_vehicles):
+            # Flow conservation
+            for i in range(1, n):
+                model.addCons(
+                    sum(x[v,i,j] for j in range(n) if j != i) == 
+                    sum(x[v,j,i] for j in range(n) if j != i)
+                )
+            
+            # Capacity constraints
+            model.addCons(
+                sum(cvrp_instance.demands[i] * x[v,i,j] 
+                    for i in range(1, n) 
+                    for j in range(n) if i != j) <= cvrp_instance.capacity
+            )
+        
+        # Each city must be visited exactly once by any vehicle
+        for i in range(1, n):
+            model.addCons(
+                sum(x[v,i,j] 
+                    for v in range(cvrp_instance.num_vehicles)
+                    for j in range(n) if j != i) == 1
+            )
+        
+        # Objective: Minimize total cost + value function estimate
+        obj = sum(cvrp_instance.distance_matrix[i][j] * x[v,i,j]
+                for v in range(cvrp_instance.num_vehicles)
+                for i in range(n)
+                for j in range(n) if i != j)
+        
+        # Add value function component
+        state_encoding = torch.FloatTensor(state.encode_state()).unsqueeze(0)
+        with torch.no_grad():
+            future_value = self.value_net(state_encoding).item()
+        
+        obj += self.gamma * future_value
+        model.setObjective(obj, "minimize")
+        
+        # Solve
+        model.optimize()
+        
+        if model.getStatus() == "optimal":
+            total_cost = model.getObjVal()
+            # Extract solution and create next state
+            next_state = state.copy()
+            # Update next_state based on solution
+            return total_cost, next_state
+        else:
+            return float('inf'), state

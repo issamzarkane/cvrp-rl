@@ -4,10 +4,11 @@ import wandb
 from cvrp import CVRP
 from state import State
 from action import Action
-from parser import parse_cvrplib_from_folders, parse_solution_from_folders
+from parser import parse_cvrplib_from_folders
 from policy import Policy, ValueNetwork
 import matplotlib.pyplot as plt
 from ORtools import ORToolsSolver
+
 
 # Assuming the parse_solution function is already defined to read .sol files and extract routes and costs
 def compute_gap(model_cost, optimal_cost):
@@ -15,7 +16,9 @@ def compute_gap(model_cost, optimal_cost):
     Computes the gap between the model's total cost and the optimal cost.
     Gap is calculated as a percentage difference.
     """
-    return abs(model_cost - optimal_cost) / optimal_cost * 100
+    optimal_cost_value = optimal_cost[0] if isinstance(optimal_cost,tuple) else optimal_cost
+    print(f"model_cost: {model_cost}, optimal_cost: {optimal_cost_value}")
+    return abs(float(model_cost) - float(optimal_cost_value)) / float(optimal_cost_value) * 100
 
 def main(): 
             folder_paths = [
@@ -27,14 +30,15 @@ def main():
             instances = parse_cvrplib_from_folders(folder_paths)
             all_gaps = {}
 
-            for instance_name, (depot, cities, demands, capacity) in instances.items():
+            for instance_name, (depot, cities, demands, capacity, num_vehicles) in instances.items():
                 print(f"Processing instance: {instance_name}")
 
-                cvrp_instance = CVRP(cities=[cities[depot]] + cities, demands=[0] + demands, capacity=capacity, depot_index=0)
+                cvrp_instance = CVRP(cities=[cities[depot]] + cities, demands=[0] + demands, capacity=capacity,num_vehicles=num_vehicles, depot_index=0)
         
                 # Get OR-Tools solution
                 ortools_solver = ORToolsSolver(cvrp_instance)
                 ortools_cost = ortools_solver.solve()
+                
         
                 # Initialize components for policy iteration
                 initial_state = State(cvrp_instance)

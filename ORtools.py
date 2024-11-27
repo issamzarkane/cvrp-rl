@@ -27,7 +27,7 @@ class ORToolsSolver:
         self.routing.AddDimensionWithVehicleCapacity(
             demand_callback_index,
             0,  
-            [self.cvrp.capacity] * self.cvrp.num_vehicles,  # Capacity for each vehicle
+            [self.cvrp.capacity] * self.cvrp.num_vehicles,
             True,  
             'Capacity')
             
@@ -35,21 +35,13 @@ class ORToolsSolver:
         search_parameters.first_solution_strategy = (
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
         
-        search_parameters.local_search_metaheuristic = (
-            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
-        search_parameters.time_limit.seconds = 300
-        #search_parameters.solution_limit = 100        
-        # Add debug prints
-        print("Starting solve...")
+        # Get the solution object directly
         solution = self.routing.SolveWithParameters(search_parameters)
-        print(f"Solution found: {solution is not None}")
         
         if solution:
-            routes, cost = self.get_solution_routes(solution), self.get_solution_cost(solution)
-            print(f"Routes: {routes}")
-            print(f"Cost: {cost}")
-            return routes, cost
-        return None, None        
+            total_cost = self.get_solution_cost(solution)
+            return total_cost
+        return None   
     def get_solution_cost(self, solution):
         total_cost = 0
         for vehicle_id in range(self.cvrp.num_vehicles):

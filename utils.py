@@ -1,66 +1,90 @@
 # utils.py
 from state import State
 from cvrp import CVRP
-from pyscipopt import Model
 import torch
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+from pyscipopt import Model
 
 def transition(state, action):
     """
     Deterministic transition function T(s, a) that returns a new state 
     after taking action a, marking cities in the route as visited.
-    
-    Parameters:
-        state (State): The current state before taking the action.
-        action (tuple): The route (action) to take, starting and ending with the depot.
-        
-    Returns:
-        State: A new State instance with updated visited status.
-        None: If action is invalid (i.e., revisits any city already visited in state).
     """
-    # Check if the action includes any city that has already been visited
+    # Check if action is valid for current vehicle
+    route_demand = sum(state.cvrp.demands[city] for city in action if city != state.cvrp.depot_index)
+    current_load = state.vehicle_loads[state.current_vehicle]
+    
+    if current_load + route_demand > state.cvrp.capacity:
+        return None  # Invalid action; exceeds vehicle capacity
+        
     if any(state.visited[city] == 0 for city in action if city != state.cvrp.depot_index):
-        return None  # Invalid action; revisits a city already visited
-
-    # Create a new state instance as a copy of the current state
+        return None  # Invalid action; revisits a city
+        
+    # Create new state
     new_state = State(state.cvrp)
-    new_state.visited = state.visited[:]  # Copy the visited list to avoid modifying the original
-
-    # Mark cities in the action as visited
+    new_state.visited = state.visited[:]
+    new_state.current_vehicle = state.current_vehicle
+    new_state.vehicle_loads = state.vehicle_loads[:]
+    
+    # Update state
     for city in action:
-        if city != state.cvrp.depot_index:  # Exclude the depot from marking
+        if city != state.cvrp.depot_index:
             new_state.visited[city] = 0
-
+    
+    # Update vehicle load
+    new_state.vehicle_loads[state.current_vehicle] += route_demand
+    
+    # Move to next vehicle if current route completed
+    if action[-1] == state.cvrp.depot_index:
+        new_state.current_vehicle = min(state.current_vehicle + 1, state.cvrp.num_vehicles - 1)
+        
     return new_state
 
-
-def cost(cvrp, action):
+def solve_milp_with_value_function(cvrp_instance, state, value_net):
     """
-    Cost function C(a) that calculates the total distance of a given action route.
-
-    Parameters:
-        cvrp (CVRP): The CVRP instance containing the distance matrix.
-        action (tuple): The route (action), represented as a sequence of city indices,
-                        starting and ending at the depot.
-
-    Returns:
-        float: The total travel distance of the route.
+    Solves CVRP using MILP with value function approximation.
     """
-    total_cost = 0
-    for i in range(len(action) - 1):
-        total_cost += cvrp.distance_matrix[action[i]][action[i + 1]]
-    return total_cost
-
-
-
+    model = Model("CVRP_with_Value_Function")
+    n = cvrp_instance.num_cities
+    
+    # Decision variables for each vehicle
+    x = {}
+    for v in range(cvrp_instance.num_vehicles):
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    x[v,i,j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
+    
+    # Add vehicle-specific constraints
+    for v in range(cvrp_instance.num_vehicles):
+        # Flow conservation
+        for i in range(1, n):
+            model.addCons(
+                sum(x[v,i,j] for j in range(n) if j != i) == 
+                sum(x[v,j,i] for j in range(n) if j != i)
+            )
+        
+        # Capacity constraints
+        model.addCons(
+            sum(cvrp_instance.demands[i] * x[v,i,j] 
+                for i in range(1, n) 
+                for j in range(n) if i != j) <= cvrp_instance.capacity
+        )
+    
+    # Each city must be visited exactly once by any vehicle
+    for i in range(1, n):
+        model.addCons(
+            sum(x[v,i,j] 
+                for v in range(cvrp_instance.num_vehicles)
+                for j in range(n) if j != i) == 1
+        )
+    
+    # Solve and return solution
+    return model.optimize()
 
 def visualize_route(cvrp_instance, route):
     """
     Visualizes the current policy's route on a 2D plane.
-
-    Parameters:
-        cvrp_instance (CVRP): The CVRP problem instance containing city coordinates.
-        route (list): Sequential route as a list of city indices.
     """
     depot = cvrp_instance.cities[cvrp_instance.depot_index]
     cities = cvrp_instance.cities
@@ -88,96 +112,6 @@ def visualize_route(cvrp_instance, route):
     plt.ylabel("Y-coordinate")
     plt.legend()
     plt.grid()
-    plt.show()
-
-def solve_milp_with_value_function(cvrp_instance, state, value_net):
-    """
-    Solves the CVRP routing problem for the current state using SCIP,
-    integrating immediate cost and cost-to-go (value function).
-
-    Parameters:
-        cvrp_instance (CVRP): The CVRP problem instance.
-        state (State): Current state of the problem.
-        value_net (ValueNetwork): Trained neural network for value approximation.
-
-    Returns:
-        list: Optimal route determined by SCIP.
-    """
-    n = cvrp_instance.num_cities
-    distances = cvrp_instance.distance_matrix
-    demands = cvrp_instance.demands
-    Q = cvrp_instance.capacity
-
-    # Initialize SCIP model
-    model = Model("CVRP_with_Value_Function")
-
-    # Decision variables
-    x = {}  # Binary variables: x[i, j] = 1 if traveling from i to j
-    for i in range(n):
-        for j in range(n):
-            if i != j:
-                x[i, j] = model.addVar(vtype="B", name=f"x_{i}_{j}")
-
-    u = {}  # Subtour elimination variables
-    for i in range(1, n):
-        u[i] = model.addVar(vtype="C", name=f"u_{i}")
-
-    # Add capacity constraints
-    load = {}
-    for i in range(n):
-        load[i] = model.addVar(vtype="C", name=f"load_{i}")
-
-    # Objective: Minimize immediate cost + cost-to-go
-    immediate_cost = sum(distances[i][j] * x[i, j] for i in range(n) for j in range(n) if i != j)
-    state_tensor = torch.FloatTensor(state.encode_state())
-    cost_to_go = value_net(state_tensor).item()
-    model.setObjective(immediate_cost + cost_to_go, sense="minimize")
-
-    # Constraints
-
-    # Each city (except depot) must be visited exactly once
-    for i in range(1, n):
-        model.addCons(sum(x[i, j] for j in range(n) if i != j) == 1)
-        model.addCons(sum(x[j, i] for j in range(n) if i != j) == 1)
-
-    # Depot flow constraints
-    model.addCons(sum(x[cvrp_instance.depot_index, j] for j in range(1, n)) == 1)
-    model.addCons(sum(x[j, cvrp_instance.depot_index] for j in range(1, n)) == 1)
-
-    # Subtour elimination constraints (MTZ formulation)
-    for i in range(1, n):
-        for j in range(1, n):
-            if i != j:
-                model.addCons(u[i] - u[j] + n * x[i, j] <= n - 1)
-
-    # Capacity constraints
-    for i in range(1, n):
-        model.addCons(u[i] <= Q)
-        model.addCons(u[i] >= demands[i])
-
-    # Vehicle capacity constraints
-    for i in range(n):
-        for j in range(n):
-            if i != j:
-                model.addCons(load[j] >= load[i] + demands[j] * x[i,j] 
-                            - Q * (1 - x[i,j]))
-    
-    # Load bounds
-    for i in range(1, n):
-        model.addCons(demands[i] <= load[i] <= Q)
-
-    # Optimize
-    model.optimize()
-
-    # Extract the optimal route
-    route = []
-    if model.getStatus() == "optimal":
-        for i in range(n):
-            for j in range(n):
-                if i != j and model.getVal(x[i, j]) > 0.5:
-                    route.append((i, j))
-    return route
-
 def extract_sequential_route(edges, start_node=0):
     """
     Converts a list of (i, j) edges into a sequential route.
