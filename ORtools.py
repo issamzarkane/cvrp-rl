@@ -13,7 +13,7 @@ class ORToolsSolver:
     def distance_callback(self, from_index, to_index):
         from_node = self.manager.IndexToNode(from_index)
         to_node = self.manager.IndexToNode(to_index)
-        return self.cvrp.distance_matrix[from_node][to_node]
+        return int(round(self.cvrp.distance_matrix[from_node][to_node]))
     
     def demand_callback(self, from_index):
         from_node = self.manager.IndexToNode(from_index)
@@ -34,14 +34,18 @@ class ORToolsSolver:
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
         search_parameters.first_solution_strategy = (
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-        
-        # Get the solution object directly
-        solution = self.routing.SolveWithParameters(search_parameters)
-        
+
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+        search_parameters.log_search = True
+        search_parameters.solution_limit = 100000
+        search_parameters.time_limit.seconds = 300  # 5 minutes
+        search_parameters.guided_local_search_lambda_coefficient = 0.5
+        solution = self.routing.SolveWithParameters(search_parameters)        
         if solution:
             total_cost = self.get_solution_cost(solution)
-            return total_cost
-        return None   
+            return solution, total_cost
+        return None, None   
     def get_solution_cost(self, solution):
         total_cost = 0
         for vehicle_id in range(self.cvrp.num_vehicles):

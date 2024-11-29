@@ -37,7 +37,7 @@ def main():
         
                 # Get OR-Tools solution
                 ortools_solver = ORToolsSolver(cvrp_instance)
-                ortools_cost = ortools_solver.solve()
+                solution, ortools_cost = ortools_solver.solve()
                 
         
                 # Initialize components for policy iteration
@@ -48,7 +48,7 @@ def main():
                 policy = Policy(cvrp_instance, initial_state, value_network, gamma=0.9)
 
                 gaps = []
-                for iteration in range(10):
+                for iteration in range(100):
                     print(f"Iteration {iteration + 1}")
                     total_cost, next_state = policy.policy_evaluation_with_milp(cvrp_instance, initial_state, value_network, optimizer)
                     gap = compute_gap(total_cost, ortools_cost)
