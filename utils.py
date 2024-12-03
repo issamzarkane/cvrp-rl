@@ -40,47 +40,6 @@ def transition(state, action):
         
     return new_state
 
-def solve_milp_with_value_function(cvrp_instance, state, value_net):
-    """
-    Solves CVRP using MILP with value function approximation.
-    """
-    model = Model("CVRP_with_Value_Function")
-    n = cvrp_instance.num_cities
-    
-    # Decision variables for each vehicle
-    x = {}
-    for v in range(cvrp_instance.num_vehicles):
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    x[v,i,j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
-    
-    # Add vehicle-specific constraints
-    for v in range(cvrp_instance.num_vehicles):
-        # Flow conservation
-        for i in range(1, n):
-            model.addCons(
-                sum(x[v,i,j] for j in range(n) if j != i) == 
-                sum(x[v,j,i] for j in range(n) if j != i)
-            )
-        
-        # Capacity constraints
-        model.addCons(
-            sum(cvrp_instance.demands[i] * x[v,i,j] 
-                for i in range(1, n) 
-                for j in range(n) if i != j) <= cvrp_instance.capacity
-        )
-    
-    # Each city must be visited exactly once by any vehicle
-    for i in range(1, n):
-        model.addCons(
-            sum(x[v,i,j] 
-                for v in range(cvrp_instance.num_vehicles)
-                for j in range(n) if j != i) == 1
-        )
-    
-    # Solve and return solution
-    return model.optimize()
 
 def visualize_route(cvrp_instance, route):
     """

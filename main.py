@@ -50,7 +50,7 @@ def main():
                 gaps = []
                 for iteration in range(100):
                     print(f"Iteration {iteration + 1}")
-                    total_cost, next_state = policy.policy_evaluation_with_milp(cvrp_instance, initial_state, value_network, optimizer)
+                    total_cost, next_state = policy.policy_evaluation_with_milp(cvrp_instance, initial_state, value_network)
                     gap = compute_gap(total_cost, ortools_cost)
                     gaps.append(gap)
                     print(f"Model cost: {total_cost}, OR-Tools cost: {ortools_cost}, Gap: {gap}%")

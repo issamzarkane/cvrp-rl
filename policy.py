@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from utils import solve_milp_with_value_function
+#from utils import solve_milp_with_value_function
 from pyscipopt import Model
 
 class ValueNetwork(nn.Module):
@@ -99,29 +99,63 @@ class Policy:
             returns.insert(0, G)
         return returns
     
-    def train_value_network(self, optimizer, num_episodes=1000):
-        """Train value network using Monte Carlo sampling"""
+    def train_value_network(self, optimizer, num_episodes=1000, lower_bounds=None, batch_size=32):
+        """
+        Train value network using data from policy evaluation and Monte Carlo returns.
+
+        Args:
+            optimizer: Optimizer for the value network.
+            num_episodes: Number of episodes to sample.
+            lower_bounds: Optional list of lower bounds for returns.
+            batch_size: Batch size for training.
+        """
         self.value_net.train()
-        
+        all_losses = []
+
         for episode in range(num_episodes):
+            # Generate an episode using the current policy
             states, actions, rewards = self.generate_episode()
+
+            # Compute discounted returns
             returns = self.compute_returns(rewards)
-            
+
+            # Apply lower bounds if provided
+            if lower_bounds:
+                returns = [max(ret, lb) for ret, lb in zip(returns, lower_bounds)]
+
+            # Prepare tensors
             state_tensors = torch.FloatTensor([s.encode_state() for s in states])
             returns_tensor = torch.FloatTensor(returns).unsqueeze(1)
-            
-            optimizer.zero_grad()
-            value_predictions = self.value_net(state_tensors)
-            loss = F.mse_loss(value_predictions, returns_tensor)
-            loss.backward()
-            optimizer.step()
-            
+
+            # Batch processing
+            for i in range(0, len(states), batch_size):
+                batch_states = state_tensors[i:i + batch_size]
+                batch_returns = returns_tensor[i:i + batch_size]
+
+                # Forward pass
+                optimizer.zero_grad()
+                value_predictions = self.value_net(batch_states)
+
+                # Compute loss
+                loss = F.mse_loss(value_predictions, batch_returns)
+
+                # Backward pass and optimization step
+                loss.backward()
+                optimizer.step()
+
+                all_losses.append(loss.item())
+
+            # Logging every 10 episodes
             if episode % 10 == 0:
-                print(f"Episode {episode}, Loss: {loss.item():.4f}")
+                avg_loss = np.mean(all_losses[-10:])
+                print(f"Episode {episode}, Avg Loss: {avg_loss:.4f}")
+
+        print("Value network training complete.")
+
     
     def policy_evaluation(self, optimizer, gamma=0.9):
         """Evaluate current policy"""
-        total_cost, next_state = solve_milp_with_value_function(
+        total_cost, next_state = self.policy_evaluation_with_milp(
             self.cvrp, self.initial_state, self.value_net)
         return total_cost, next_state
     
@@ -146,68 +180,104 @@ class Policy:
             self.train_value_network(optimizer)
             
             print(f"Total Cost: {total_cost}")
-
-    def policy_evaluation_with_milp(self, cvrp_instance, state, value_net, optimizer):
+    def policy_evaluation_with_milp(self, cvrp_instance, state, value_net):
         """
-        Evaluates current policy using MILP with value function approximation
+        Evaluates the current policy using MILP with SCIP and value function approximation.
+
+        Args:
+            cvrp_instance: CVRP instance with cities, demands, and capacity.
+            state: Current state of the CVRP (unvisited cities, demands, etc.).
+            value_net: Neural network for estimating the value function.
+
+        Returns:
+            total_cost: Cost of the solution found by MILP.
+            next_state: Updated state after applying the action.
         """
         model = Model("CVRP_with_Value_Function")
         n = cvrp_instance.num_cities
-        
-        # Decision variables for each vehicle
+        depot = 0  # Depot index
+
+        # Decision variables
         x = {}
         for v in range(cvrp_instance.num_vehicles):
             for i in range(n):
                 for j in range(n):
                     if i != j:
-                        x[v,i,j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
-        
-        # Add vehicle-specific constraints
-        for v in range(cvrp_instance.num_vehicles):
-            # Flow conservation
-            for i in range(1, n):
-                model.addCons(
-                    sum(x[v,i,j] for j in range(n) if j != i) == 
-                    sum(x[v,j,i] for j in range(n) if j != i)
-                )
-            
-            # Capacity constraints
-            model.addCons(
-                sum(cvrp_instance.demands[i] * x[v,i,j] 
-                    for i in range(1, n) 
-                    for j in range(n) if i != j) <= cvrp_instance.capacity
-            )
-        
-        # Each city must be visited exactly once by any vehicle
-        for i in range(1, n):
-            model.addCons(
-                sum(x[v,i,j] 
-                    for v in range(cvrp_instance.num_vehicles)
-                    for j in range(n) if j != i) == 1
-            )
-        
-        # Objective: Minimize total cost + value function estimate
-        obj = sum(cvrp_instance.distance_matrix[i][j] * x[v,i,j]
-                for v in range(cvrp_instance.num_vehicles)
-                for i in range(n)
-                for j in range(n) if i != j)
-        
-        # Add value function component
+                        x[v, i, j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
+
+        # Subtour elimination variables
+        u = {}
+        for i in range(n):
+            u[i] = model.addVar(lb=0, ub=n - 1, vtype="C", name=f"u_{i}")
+
+        # Objective: Immediate cost + future value
+        immediate_cost = sum(
+            cvrp_instance.distance_matrix[i][j] * x[v, i, j]
+            for v in range(cvrp_instance.num_vehicles)
+            for i in range(n)
+            for j in range(n)
+            if i != j
+        )
+
+        # Estimate future value using the value network
         state_encoding = torch.FloatTensor(state.encode_state()).unsqueeze(0)
         with torch.no_grad():
-            future_value = self.value_net(state_encoding).item()
-        
-        obj += self.gamma * future_value
-        model.setObjective(obj, "minimize")
-        
-        # Solve
+            future_value = value_net(state_encoding).item()
+
+        # Set the objective
+        model.setObjective(immediate_cost + self.gamma * future_value, "minimize")
+
+        # Constraints
+        # 1. Each city must be visited exactly once
+        for i in range(1, n):
+            model.addCons(
+                sum(x[v, i, j] for v in range(cvrp_instance.num_vehicles) for j in range(n) if j != i) == 1
+            )
+
+        # 2. Flow conservation for each vehicle
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(1, n):
+                model.addCons(
+                    sum(x[v, i, j] for j in range(n) if j != i) ==
+                    sum(x[v, j, i] for j in range(n) if j != i)
+                )
+
+        # 3. Depot constraints: Each vehicle starts and ends at the depot
+        for v in range(cvrp_instance.num_vehicles):
+            model.addCons(sum(x[v, depot, j] for j in range(1, n)) == 1)
+            model.addCons(sum(x[v, i, depot] for i in range(1, n)) == 1)
+
+        # 4. Capacity constraints
+        for v in range(cvrp_instance.num_vehicles):
+            model.addCons(
+                sum(cvrp_instance.demands[i] * x[v, i, j] for i in range(1, n) for j in range(n) if i != j) <= cvrp_instance.capacity
+            )
+
+        # 5. MTZ subtour elimination
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(1, n):
+                for j in range(1, n):
+                    if i != j:
+                        model.addCons(u[i] - u[j] + n * x[v, i, j] <= n - 1)
+
+        # Solve the model
         model.optimize()
-        
+
+        # Extract results
         if model.getStatus() == "optimal":
             total_cost = model.getObjVal()
-            # Extract solution and create next state
-            next_state = state.copy()
-            # Update next_state based on solution
+
+            # Extract solution to determine next state
+            visited_cities = set()
+            for v in range(cvrp_instance.num_vehicles):
+                for i in range(n):
+                    for j in range(n):
+                        if i != j and model.getVal(x[v, i, j]) > 0.5:
+                            visited_cities.add(j)
+
+            # Update the next state based on visited cities
+            next_state = state.transition(list(visited_cities))
             return total_cost, next_state
-        else:
-            return float('inf'), state
+
+        print("MILP did not find an optimal solution.")
+        return float('inf'), state
