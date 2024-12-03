@@ -194,6 +194,10 @@ class Policy:
             next_state: Updated state after applying the action.
         """
         model = Model("CVRP_with_Value_Function")
+        model.setParam("limits/time", 900)  # Limit to 900 seconds (15 minutes)
+        #model.setParam("heuristics/aggressiveness", 1)
+        model.setParam("limits/nodes", 100000)
+        model.setParam("limits/gap", 0.01)  # Stop when the gap is below 1%
         n = cvrp_instance.num_cities
         depot = 0  # Depot index
 
@@ -281,3 +285,82 @@ class Policy:
 
         print("MILP did not find an optimal solution.")
         return float('inf'), state
+
+
+
+    def solve_with_pure_milp(self, cvrp_instance, state):
+        """
+        Solves CVRP using pure MILP without value function approximation
+        """
+        model = Model("CVRP_Pure_MILP")
+        model.setParam("limits/time", 300)  # 5 minute limit
+        n = cvrp_instance.num_cities
+        depot = 0
+
+        # Decision variables
+        x = {}
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(n):
+                for j in range(n):
+                    if i != j:
+                        x[v, i, j] = model.addVar(vtype="B", name=f"x_{v}_{i}_{j}")
+
+        # Subtour elimination variables
+        u = {}
+        for i in range(n):
+            u[i] = model.addVar(lb=0, ub=n - 1, vtype="C", name=f"u_{i}")
+
+        # Objective: Only immediate cost
+        objective = sum(
+            cvrp_instance.distance_matrix[i][j] * x[v, i, j]
+            for v in range(cvrp_instance.num_vehicles)
+            for i in range(n)
+            for j in range(n)
+            if i != j
+        )
+
+        model.setObjective(objective, "minimize")
+
+        # Add standard CVRP constraints
+        # Each city visited once
+        for i in range(1, n):
+            model.addCons(
+                sum(x[v, i, j] for v in range(cvrp_instance.num_vehicles) for j in range(n) if j != i) == 1
+            )
+
+        # Flow conservation
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(1, n):
+                model.addCons(
+                    sum(x[v, i, j] for j in range(n) if j != i) ==
+                    sum(x[v, j, i] for j in range(n) if j != i)
+                )
+
+        # Depot constraints
+        for v in range(cvrp_instance.num_vehicles):
+            model.addCons(sum(x[v, depot, j] for j in range(1, n)) == 1)
+            model.addCons(sum(x[v, i, depot] for i in range(1, n)) == 1)
+
+        # Capacity constraints
+        for v in range(cvrp_instance.num_vehicles):
+            model.addCons(
+                sum(cvrp_instance.demands[i] * x[v, i, j] 
+                    for i in range(1, n) 
+                    for j in range(n) if i != j) <= cvrp_instance.capacity
+            )
+
+        # MTZ subtour elimination
+        for v in range(cvrp_instance.num_vehicles):
+            for i in range(1, n):
+                for j in range(1, n):
+                    if i != j:
+                        model.addCons(u[i] - u[j] + n * x[v, i, j] <= n - 1)
+
+        # Solve and return results
+        model.optimize()
+        
+        if model.getStatus() == "optimal":
+            return model.getObjVal(), x
+        else:
+            print(f"Solver status: {model.getStatus()}")
+            return None, None

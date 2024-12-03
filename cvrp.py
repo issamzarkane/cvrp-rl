@@ -27,8 +27,8 @@ class CVRP:
         random_state = State(self)
         num_cities = len(self.cities) - 1
         # Randomly assign some cities as visited
-        num_visited = random.randint(1, num_cities)
-        visited_cities = random.sample(range(1, num_cities + 1), num_visited)
+        num_visited = random.randint(1, num_cities + 1)
+        visited_cities = random.choice(range(1, num_cities + 1), num_visited, replace=False)
         for city in visited_cities:
             random_state.transition(city)
         return random_state
